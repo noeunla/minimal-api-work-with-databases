@@ -12,5 +12,6 @@ public class PizzaDb : DbContext
     {
         modelBuilder.Entity<Pizza>().HasData(
             new Pizza { Id = 1, Name = "Pepperoni", Description = "Classic Pepperoni Pizza"});
+            
     }
 }
