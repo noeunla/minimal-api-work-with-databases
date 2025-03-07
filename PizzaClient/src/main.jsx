@@ -15,3 +15,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ThemeProvider>
   </React.StrictMode>,
 )
+
+// https://learn.microsoft.com/en-us/training/modules/build-web-api-minimal-spa/
