@@ -4,8 +4,10 @@ using Microsoft.OpenApi.Models;
 using PizzaStore.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+// base de datos SQLite
 var connectionString = builder.Configuration.GetConnectionString("pizzas") ?? "Data Source=pizzas.db";
 builder.Services.AddDbContext<PizzaDb>(options => options.UseSqlite(connectionString));
+// swagger http://localhost:5100/swagger/index.html
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
