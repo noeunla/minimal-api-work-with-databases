@@ -1,0 +1,904 @@
+Create a full stack application by using React and minimal API for ASP.NET Core
+
+https://learn.microsoft.com/en-us/training/modules/build-web-api-minimal-spa/
+
+CREANDO APP REACT FRONT END ***
+
+The Dev Containers extension for Visual Studio Code requires Docker to be installed on your local machine. The extension hosts the development container locally using the Docker host with the correct developer tools and dependencies preinstalled to complete this training module.
+
+Open Visual Studio Code in the context of an empty directory.
+
+Ensure that you have the Dev Containers extension installed in Visual Studio Code.
+
+Open a new terminal in the editor.
+
+Clone the MicrosoftDocs/minimal-api-work-with-databases GitHub repository into the current directory.
+git clone https://github.com/MicrosoftDocs/minimal-api-work-with-databases.git .
+
+Open the folder into which you cloned the GitHub repository.
+
+Open the Command Palette, search for the Dev Containers commands, and then select Dev Containers: Reopen in Container.
+
+Validate that .NET 6 and Node.js are installed in your environment:
+dotnet --list-sdks
+node --version
+
+Close the terminal.
+
+The remaining exercises in this project take place in the context of this development container.
+
+Scaffold an app
+To scaffold an app, you use the Vite scaffolder. By using npx, you can call the scaffolder and have it create a working React app in a matter of seconds.
+
+Open an integrated terminal, Ctrl + ` to create the app by using npx create vite@latest PizzaClient --template react:
+npm create vite@latest PizzaClient --template react
+cd PizzaClient
+
+Answer the CLI prompts as follows:
+
+Package name: pizzaclient - The folder created by Vite uses Camel case, PizzaClient.
+Select a framework: React
+Select a variant: Javascript
+What you get is a directory, PizzaClient, that contains your scaffolded React app.
+
+Install dependencies by calling npm install:
+npm install
+
+Update the vite.config.js to provide a consistent front-end port. Replace the contents of ./vite.config.js with the following code:
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,  // Client port
+    host: true
+  }
+})
+
+PORT: The port is set to 3000, a common port number used for front-end apps.
+Start the app by calling npm run dev:
+npm run dev
+
+When you see the notification to Open in browser, select that.
+
+You should see the page render like this example
+
+Leave the browser open, you will return to it several times in the training module.
+
+When you are done in the browser and need to return to the development environment, you don't need to stop the app in the terminal. Vite will restart the app when it detects changes.
+
+Build the Pizza component
+Build the parent component that manages state for the pizza list. The initial data is hard-coded in the component. Later, you'll move the data to a server.
+
+Create a file in the src subdirectory named Pizza.jsx and give it the following content:
+
+import { useState, useEffect } from 'react';
+import PizzaList from './PizzaList';
+
+const term = "Pizza";
+
+function Pizza() {
+  const [data, setData] = useState([]);
+  const [maxId, setMaxId] = useState(0);
+
+  useEffect(() => {
+    fetchPizzaData();
+  }, []);
+
+  const fetchPizzaData = () => {
+    // Simulate fetching data from API
+    const pizzaData = [
+      { id: 1, name: 'Margherita', description: 'Tomato sauce, mozzarella, and basil' },
+      { id: 2, name: 'Pepperoni', description: 'Tomato sauce, mozzarella, and pepperoni' },
+      { id: 3, name: 'Hawaiian', description: 'Tomato sauce, mozzarella, ham, and pineapple' },
+    ];
+    setData(pizzaData);
+    setMaxId(Math.max(...pizzaData.map(pizza => pizza.id)));
+  };
+
+  const handleCreate = (item) => {
+    // Simulate creating item on API
+    const newItem = { ...item, id: data.length + 1 };
+    setData([...data, newItem]);
+    setMaxId(maxId + 1);
+  };
+
+  const handleUpdate = (item) => {
+    // Simulate updating item on API
+    const updatedData = data.map(pizza => pizza.id === item.id ? item : pizza);
+    setData(updatedData);
+  };
+
+  const handleDelete = (id) => {
+    // Simulate deleting item on API
+    const updatedData = data.filter(pizza => pizza.id !== id);
+    setData(updatedData);
+  };
+
+
+  return (
+    <div>
+      <PizzaList
+        name={term}
+        data={data}
+        onCreate={handleCreate}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
+    </div>
+  );
+}
+
+export default Pizza;
+
+This component is responsible for managing the data and passing it to the PizzaList child component. It also handles the create, update, and delete data operations. This component has no visible UI. That functionality is handled by the PizzaList component.
+
+The Pizza component uses the useState and useEffect hooks to create data state. The useState hook is used to manage the data and maxId. The useEffect hook is used to set the data on the initial page request. The Pizza component passes the data to the PizzaList component.
+
+Build a Pizza list component
+Create a file in the src subdirectory named PizzaList.jsx and give it the following content:
+
+import { useState } from 'react';
+
+function PizzaList({ name, data, onCreate, onUpdate, onDelete, error }) {
+  const [formData, setFormData] = useState({ id: '', name: '', description: '' });
+  const [editingId, setEditingId] = useState(null);
+
+  const handleFormChange = (event) => {
+    const { name, value } = event.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (editingId) {
+      onUpdate(formData);
+      setEditingId(null);
+    } else {
+      onCreate(formData);
+    }
+    setFormData({ id: '', name: '', description: '' });
+  };
+
+  const handleEdit = (item) => {
+    setEditingId(item.id);
+    setFormData({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({ id: '', name: '', description: '' });
+  };
+
+
+  return (
+    <div>
+      <h2>New {name}</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          name="name"
+          placeholder="Name"
+          value={formData.name}
+          onChange={handleFormChange}
+        />
+        <input
+          type="text"
+          name="description"
+          placeholder="Description"
+          value={formData.description}
+          onChange={handleFormChange}
+        />
+        <button type="submit">{editingId ? 'Update' : 'Create'}</button>
+        {editingId && <button type="button" onClick={handleCancelEdit}>Cancel</button>}
+      </form>
+      {error && <div>{error.message}</div>}
+      <h2>{name}s</h2>
+      <ul>
+        {data.map(item => (
+          <li key={item.id}>
+            <div>{item.name} - {item.description}</div>
+            <div><button onClick={() => handleEdit(item)}>Edit</button>
+            <button onClick={() => onDelete(item.id)}>Delete</button></div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default PizzaList;
+
+The PizzaList React component renders a form to create and edit pizza items. The component receives props from the parent Pizza.jsx and uses the useState and useEffect hooks to manage the form data and the editing state.
+
+The PizzaList component renders a form with two input fields for the pizza name and description, and two buttons to create or update a pizza.
+
+Open the main.jsx and replace the code with the following so the Pizza component is included.
+
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+
+import Pizza from './Pizza'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Pizza />
+  </React.StrictMode>,
+)
+
+Test the app
+Return to the browser and reload the app.
+
+DESING THE API **
+CONNECT TO A BACKEND API 
+
+You have a front-end app. What do you need to think about for the back-end application? Well, you're either:
+
+Working against mocked data. During the development phase, you can work independently, as a standalone team. But you still want to build out the application and at least emulate that you're working with an API.
+Talking to a real API. If you're in this phase, the back-end team has built the API, and now you want to connect it to your front-end.
+
+Mock an API
+As you build your front-end app, you know that a back-end team will be done building the API at some point. Do you wait for the back-end team to finish, before you build the corresponding view? There are different approaches you can take here:
+
+Build a vertical: In this approach, you work closely with the person building the back-end API. You build your front-end part, and then the back-end developer builds their part. When both parts work, you have a full vertical, and you can continue to the next feature. This approach is viable, but it does force the teams to be very in sync.
+
+Mock the data: This approach has fewer requirements for close coordination between teams. In this scenario, the front-end developer negotiates with the back-end team, about what the response from the back-end API looks like. When you agree, you start creating mock data, static files that the front-end team uses instead. The front-end team can now move at any desired development speed. At some point, you do need to synchronize with the back-end team, to ensure that the back-end API was built according to what you agreed on.
+
+Use correctly formatted JSON
+The json-server library creates a RESTful API for you, from a static JSON file. You give json-server a syntactically-correct JSON file that looks like the following example:
+
+{
+  "pizzas": [
+      { "id": 1, "name": "Margherita", "description": "Tomato sauce, mozzarella, and basil" },
+      { "id": 2, "name": "Pepperoni", "description": "Tomato sauce, mozzarella, and pepperoni" },
+      { "id": 3, "name": "Hawaiian", "description": "Tomato sauce, mozzarella, ham, and pineapple" }
+  ]
+}
+
+You may notice that this JSON uses double quotes for the property names. In JavaScript, you can use single quotes, double quotes, or no quotes for property names, but when using JSON outside of JavaScript, the syntax must be correct with double quotes.
+
+Use the json-server library
+To use json-server, you use an executable npx that comes with your Node.js installation. You start your mock API by calling the executable npx, the name of the package json-server, and the name of the static file containing your API data. Here's an example:
+npx json-server --watch db.json --port 5100
+
+How does this work?
+At this point, your mocked API starts to be served on a certain port (for example, "5100"). Furthermore, you can interact with it as though it were a real API. It supports requests like the following:
+GET    /pizzas
+GET    /pizzas/1
+POST   /pizzas
+PUT    /pizzas/1
+PATCH  /pizzas/1
+DELETE /pizzas/1
+
+If you make any requests toward this mocked API and change data, the static file db.json would change.
+
+What about the front-end app?
+Because this mocked API works exactly like a real API, you can make requests to it in your front-end code with a browser-native request object, fetch. For example:
+fetch("http://localhost:5100/pizzas")
+  .then(response => response.json())
+  .then(data => console.log(data)) // outputs mocked data
+  
+  Talk to API with proxy
+A proxy is a server that sits between the front-end app and the back-end API. The front-end app makes requests toward the proxy, and the proxy forwards the request toward the back-end API. The proxy can also forward the response back to the front-end app. Use a proxy to make requests toward the mocked API.
+
+The Vite framework provides vite.config.js which allows you to configure how the app is run including the proxy.
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000, // Client port
+    proxy: {
+      '/pizzas': {
+        target: 'http://localhost:5059', // Server port
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request to the Target:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        },
+      }
+    }
+  }
+})
+
+If your front-end framework doesn't provide a proxy mechanism with its local server, you need to provide one. A standard way to set up a proxy is to set the proxy property in the package.json with an entry like the following:
+"proxy": "http://localhost:5100"
+
+Instead of making requests toward http://localhost:5100/pizzas, you can now make them toward /pizzas, which resolves to http://localhost:5100/pizzas when you make requests.
+
+Talk to a real API
+After the real API is finished, you should have the front-end app make requests toward that API, instead of the mocked API. Doing so helps ensure that everything is working as it should.
+
+However, when you first try to talk to your real back-end API, you might get an error that looks something like the following:
+Access to fetch at http://localhost:5100 from origin 'http://localhost:3000' has been blocked by CORS policy...
+
+This error tells you that the front-end app isn't allowed to call the back-end API, because the front-end app comes from a different place than the back-end API is residing. This difference includes both the domain name and the port of each app. The good news is that you can fix this error by implementing CORS on the back-end API.
+
+CORS
+CORS is a protocol that allows a back-end API to accept requests from domains (and ports) other than the one it's currently running on. This is a security feature.
+
+Suppose the calling client makes a request toward a back-end API, and starts by sending a preflight request by using the OPTIONS verb. Essentially, the calling client is asking the back-end API what it can perform toward a resource. The back-end API can approve or deny the request, at which point the actual request (such as GET or POST) goes through. Imagine the following flow below:
+
+client> OPTIONS, can I do POST on /pizzas?
+server> you can do GET on /pizzas
+client> receives a deny response at this point
+
+Another more successful attempt might look like the following:
+
+client> OPTIONS, can I do GET on /pizzas
+server> you can do GET on /pizzas
+client> receives data from back end
+
+Configure CORS on the server
+In this example app used in this training module, the API and front-end app are both hosted from the same IP (localhost) but are served from different ports:
+
+The API is served from port 5100
+The front-end app is served from port 3000
+The CORS configuration is the responsibility of the server. How that's configured depends on the runtime the server is using. After you download the .NET sample API app in the next unit, you can update your CORS configuration in the .NET Core API's Program.cs file:
+
+// 1) define a unique string
+readonly string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+// 2) define allowed domains, in this case "http://example.com" and "*" = all
+//    domains, for testing purposes only.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+      builder =>
+      {
+          builder.WithOrigins(
+            "http://example.com", "*");
+      });
+});
+// 3) use the capability
+app.UseCors(MyAllowSpecificOrigins);
+
+The code snippet shows how to add a policy to an API that includes an allowlist of domains that are allowed to communicate with the API. In this example, the domain http://example.com is added to the allowlist. If you want to allow all domains, you can use * as the allowlist, which means that all possible domains are allowed.
+The UseCors() method can be used to offer more granular control over which HTTP verbs are allowed for specific routes.
+
+Exercise - Create an API
+
+In this exercise, you move the static data from the app into a mock server, and then you use the actual server.
+
+Prepare code to fetch data from mock server
+At this point, you have a front-end app with static data inside of the app. You want to move the static data into a mock server, while you're waiting for the back-end team to finish building the API. Performing this step sets you up nicely for using the actual API, once it's done.
+
+In Pizza.jsx, replace the code with the following code:
+
+import { useState, useEffect } from 'react';
+import PizzaList from './PizzaList';
+
+const term = "Pizza";
+const API_URL = '/pizzas';
+const headers = {
+  'Content-Type': 'application/json',
+};
+
+function Pizza() {
+  const [data, setData] = useState([]);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchPizzaData();
+  }, []);
+
+  const fetchPizzaData = () => {
+    fetch(API_URL)
+      .then(response => response.json())
+      .then(data => setData(data))
+      .catch(error => setError(error));
+  };
+
+  const handleCreate = (item) => {
+
+    console.log(`add item: ${JSON.stringify(item)}`)
+
+    fetch(API_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({name: item.name, description: item.description}),
+    })
+      .then(response => response.json())
+      .then(returnedItem => setData([...data, returnedItem]))
+      .catch(error => setError(error));
+  };
+
+  const handleUpdate = (updatedItem) => {
+
+    console.log(`update item: ${JSON.stringify(updatedItem)}`)
+
+    fetch(`${API_URL}/${updatedItem.id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(updatedItem),
+    })
+      .then(() => setData(data.map(item => item.id === updatedItem.id ? updatedItem : item)))
+      .catch(error => setError(error));
+  };
+
+  const handleDelete = (id) => {
+    fetch(`${API_URL}/${id}`, {
+      method: 'DELETE',
+      headers,
+    })
+      .then(() => setData(data.filter(item => item.id !== id)))
+      .catch(error => console.error('Error deleting item:', error));
+  };
+
+
+  return (
+    <div>
+      <PizzaList
+        name={term}
+        data={data}
+        error={error}
+        onCreate={handleCreate}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
+    </div>
+  );
+}
+
+export default Pizza;
+
+The data is fetched with a call to a mocked API instead of a front-end app's in-memory array. Notice that the URL used is /pizzas without the reference to the back-end server. This is because a proxy makes the requests toward the mocked API.
+
+Create a file named db.json in the PizzaClient directory. Insert the following content:
+
+{
+  "pizzas": [
+    {
+      "id": 1,
+      "name": "Margherita",
+      "description": "Tomato sauce, mozzarella, and basil"
+    },
+    {
+      "id": 2,
+      "name": "Pepperoni",
+      "description": "Tomato sauce, mozzarella, and pepperoni"
+    },
+    {
+      "id": 3,
+      "name": "Hawaiian",
+      "description": "Tomato sauce, mozzarella, ham, and pineapple"
+    }
+  ]
+}
+
+This is a JSON representation of the mocked Pizza data.
+
+Prepare proxy to mock server
+In the Visual Studio Code panel, typically found below the editor region, select Ports.
+
+Find the local address for the API on port 5100. Hover over the address and select the copy icon.
+
+Paste this value as the proxy property in the Vite React vite.config.js so the front-end app uses the correct server port.
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,  // Client port
+    proxy: {
+      '/pizzas': {
+        target: 'http://localhost:5100', // Mock server port 
+		// target: 'https://urban-enigma-wrwvrw99946c99pq-5100.app.github.dev/',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request to the Target:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        },
+      }
+    }
+  }
+})
+
+Vite reloads the React app to use the new proxy configuration.
+
+Start the mock server
+Right-click on the PizzaClient subfolder and select Open in integrated terminal.
+
+Start the mock API with the following command in that new terminal.
+npx json-server --watch --port 5100 db.json
+
+Running this code starts the mock server, and output similar to the following appears:
+\{^_^}/ hi!
+Loading db.json
+Done
+
+Resources
+http://localhost:5100/pizzas
+
+Home
+http://localhost:5100
+
+Use your app in the browser to fetch data from the mock API. Create, update, and delete pizzas to make sure the changes work.
+
+Use Ctrl + C to stop the mock server.
+
+Prepare code to fetch data from .NET API server
+Suppose the back-end team has now finished building the server. To use the server, you just need to fetch the code from GitHub and run it and configure CORS as well.
+
+The back-end project is in the PizzaStore subdirectory. Right-click on that subdirectory and select Open in integrated terminal..
+
+Run dotnet ef database to apply the migrations to create a database with tables.
+dotnet ef database update
+
+If the dotnet ef can't be found, install it with dotnet tool install -g dotnet-ef then repeat the previous command.
+
+In the file explorer, browse to the PizzaStore directory, and open Program.cs. Replace with the following code to enable CORS (the CORS-related code is highlighted):
+
+using Microsoft.EntityFrameworkCore;
+using PizzaStore.Data;
+using Microsoft.OpenApi.Models;
+using PizzaStore.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("pizzas") ?? "Data Source=pizzas.db";
+builder.Services.AddDbContext<PizzaDb>(options => options.UseSqlite(connectionString));
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+  c.SwaggerDoc("v1", new OpenApiInfo { Title = "Pizzas API", Description = "Pizza pizza", Version = "v1" });
+});
+// 1) define a unique string
+string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+// 2) define allowed domains, in this case "http://example.com" and "*" = all
+//    domains, for testing purposes only.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+      builder =>
+      {
+          builder.WithOrigins(
+            "http://example.com", "*");
+      });
+});
+
+var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+  app.UseSwagger();
+  app.UseSwaggerUI(c =>
+  {
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Pizzas API V1");
+  });
+}
+
+
+
+// 3) use the capability
+app.UseCors(MyAllowSpecificOrigins);
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/pizzas", async(PizzaDb db) => await db.Pizzas.ToListAsync());
+
+app.MapPost("/pizzas", async(PizzaDb db, Pizza pizza) => {
+    await db.Pizzas.AddAsync(pizza);
+    await db.SaveChangesAsync();
+    return Results.Created($"/pizzas/{pizza.Id}", pizza);
+});
+
+app.MapPut("/pizzas/{id}", async (PizzaDb db, Pizza updatePizza, int id) =>
+{
+  var pizzaItem = await db.Pizzas.FindAsync(id);
+  if (pizzaItem is null) return Results.NotFound();
+  pizzaItem.Name = updatePizza.Name;
+  pizzaItem.Description = updatePizza.Description;
+  await db.SaveChangesAsync();
+  return Results.NoContent();
+});
+
+app.MapDelete("/pizzas/{id}", async (PizzaDb db, int id) =>
+{
+  var todo = await db.Pizzas.FindAsync(id);
+  if (todo is null)
+  {
+    return Results.NotFound();
+  }
+  db.Pizzas.Remove(todo);
+  await db.SaveChangesAsync();
+  return Results.Ok();
+});
+app.Run();
+
+The changes configure CORS. You'll be able to read and write toward the API, despite the front-end app and API running on different ports.
+
+Prepare proxy to .NET API server URL
+In the Visual Studio Code panel, typically found below the editor region, select Ports. The Ports panel appears.
+
+Find the local address for the API on port 5100. Hover over the address and select the copy icon.
+Paste this value as the proxy property in the Vite React vite.config.js so the front-end app uses the correct server port.
+
+Start the .NET Core API server
+In the integrated terminal for the PizzaStore subfolder, start the .NET Core API in the terminal. The server runs on port 5100.
+dotnet run
+
+In the open browser, use the app, it displays one item with the title, Pepperoni.
+
+When you are done testing the app, leave the browser open and let the front-end React app run in the terminal. You can also let the .NET Core API server run in the terminal. You'll use them again in the next exercise.
+
+Congratulations, you've created a full stack application! The React front-end app is reading data from a back-end database via a minimal API.
+
+---
+Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'https://localhost:7200;http://localhost:5100'.
+fail: Microsoft.Extensions.Hosting.Internal.Host[11]
+      Hosting failed to start
+      System.InvalidOperationException: Unable to configure HTTPS endpoint. No server certificate was specified, and the default developer certificate could not be found or is out of date.
+      To generate a developer certificate run 'dotnet dev-certs https'. To trust the certificate (Windows and macOS only) run 'dotnet dev-certs https --trust'.
+Unhandled exception. System.IO.IOException: Failed to bind to address http://127.0.0.1:5100: address already in use.
+ ---> Microsoft.AspNetCore.Connections.AddressInUseException: Address already in use
+ ---> System.Net.Sockets.SocketException (98): Address already in use
+ 
+"profiles": {
+  "YourProjectName": {
+    // "applicationUrl": "https://localhost:7200;http://localhost:5100",
+	 "applicationUrl": "https://localhost:7200;http://localhost:5200",
+    "environmentVariables": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    }
+  }
+}
+
+ Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'https://localhost:7200;http://localhost:5200'.
+ 
+ [
+{
+"id": 1,
+"name": "Pepperoni",
+"description": "Pepperoni Pizza"
+}
+]
+
+https://learn.microsoft.com/en-us/answers/questions/1667648/cors-configuration-does-not-work-as-expected
+
+---
+
+Design the user interface (UI)
+
+The functionality of the front-end app is complete but it isn't engaging visually. Let's fix that.
+
+Design systems for front-end apps
+A design system is a collection of reusable components, guided by clear standards that can be assembled together to build any number of applications. Design systems are used to create consistent, high-quality user experiences.
+
+A design system specifies the look and feel of an application, and the way that users interact with it. They also provide a common language for designers and developers to communicate with each other.
+
+There are many front-end design systems available. Here are some of the most popular:
+
+Material Design
+Fluent UI
+Bootstrap
+Chakra UI
+Select a design system
+When selecting a design system, consider the following:
+
+Apply a design system theme to your React app
+Design systems provide either default themes meant to apply to the entire site. In React, this is typically in main.jsx or index.jsx. The following example uses Material UI to add a default theme to the app.
+
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+const theme = createTheme();
+
+import Pizza from './Pizza'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Pizza className="Pizza"/>
+    </ThemeProvider>
+  </React.StrictMode>,
+)
+
+Apply a design system component to your React app
+
+Let's apply a design system component to an HTML button. Replace the button element with the design system Button.
+
+Include the component in your component's page:
+
+import Button from '@mui/material/Button';
+
+Replace HTML with the design system component:
+
+/* remove this HTML element */
+<button onClick={incrementCounter}>Increment</button>
+
+/* replace with this Design System component */
+<Button onClick={incrementCounter}>Increment</Button>
+
+The Button, with default styling, is on the left and the button is on the right:
+
+Exercise - Use a design system in your app
+
+Use a design system to improve the appearance of your app.
+
+Install Material UI
+Right-click the PizzaClient subfolder and select Open in integrated terminal.
+
+Run the following command to install the Material UI components:
+
+npm install @mui/material @emotion/react @emotion/styled @mui/icons-material
+
+Import Material UI
+To import Material UI to your React app, replace the code in main.jsx with the following code:
+
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+const theme = createTheme();
+
+import Pizza from './Pizza'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Pizza className="Pizza"/>
+    </ThemeProvider>
+  </React.StrictMode>,
+)
+
+The code imports the ThemeProvider and createTheme components from Material UI and creates a default theme using the createTheme function. The ThemeProvider component is then used to wrap the Pizza component and apply the default theme to the app. Additionally, the CssBaseline component is imported and used to apply a baseline CSS to the app.
+
+Pizza component
+Because the pizza.jsx file controls state but doesn't apply styles or components to rendering the pizza list, you don't need to add anything to this page.
+
+PizzaList component
+Material UI provides a lot of functionality. For this unit, change the Pizza List to be more engaging with styles and icons. Open PizzaList.jsx and replace the code with the following code. Notice that only the return () section is changed.
+
+import { useState, useEffect } from 'react';
+import { TextField, Button, Box, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton } from '@mui/material';
+import { Delete, Edit } from '@mui/icons-material';
+
+function PizzaList({ name, data, onCreate, onUpdate, onDelete, error }) {
+
+  console.log(`PizzaList: ${JSON.stringify(data)}`);
+
+  const [formData, setFormData] = useState({ id: '', name: '', description: '' });
+  const [editingId, setEditingId] = useState(null);
+
+  useEffect(() => {
+    if (editingId === null) {
+      setFormData({ id: '', name: '', description: '' });
+    } else {
+      const currentItem = data.find(item => item.id === editingId);
+      setFormData(currentItem);
+    }
+  }, [editingId, data]);
+
+  const handleFormChange = (event) => {
+
+    console.log(`handleFormChange: ${event.target.name} ${event.target.value}`)
+
+    const { name, value } = event.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    console.log(`formData: ${JSON.stringify(formData)}`)
+
+    if (editingId !== null) {
+      console.log(`update item: ${JSON.stringify(formData)}`)
+      onUpdate(formData);
+    } else {
+      onCreate(formData);
+    }
+
+    setFormData({ id: '', name: '', description: '' });
+    setEditingId(null);
+  };
+
+  const handleEdit = (id) => {
+    setEditingId(id);
+  };
+
+  const handleCancel = () => {
+    setFormData({ id: '', name: '', description: '' });
+    setEditingId(null);
+  };
+
+  const handleDelete = (id) => {
+    onDelete(id);
+  };
+
+  return (
+    <Box className="Box" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <h2>{name}</h2>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8}}>
+        <TextField label="Name" name="name" value={formData.name} onChange={handleFormChange} />
+        <TextField label="Description" name="description" value={formData.description} onChange={handleFormChange} />
+        <Button sx={{ mr: 1 }} variant="contained" type="submit">{editingId === null ? 'Create' : 'Update'}</Button>
+        {editingId !== null && <Button variant="contained" color="secondary" onClick={handleCancel}>Cancel</Button>}
+      </form>
+      <List sx={{ width: '100%', maxWidth: 360 }}>
+        {data.map(item => (
+          <ListItem key={item.id} secondaryAction={
+            <>
+              <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(item.id)}>
+                <Edit />
+              </IconButton>
+              <IconButton edge="end" aria-label="delete" onClick={() => onDelete(item.id)}>
+                <Delete />
+              </IconButton>
+            </>
+          }>
+            <ListItemText primary={item.name} secondary={item.description} />
+          </ListItem>
+        ))}
+      </List>
+      {error && <p>{error}</p>}
+    </Box>
+  );
+}
+
+export default PizzaList;
+
+
+In the PizzaList component, the Material UI components TextField, Button, Box, List, ListItem, ListItemText, ListItemSecondaryAction, and IconButton are imported and used to create a list of pizza items.
+
+Organization components:
+
+The Box component is used to wrap the form elements and add spacing between them.
+
+Presentation components:
+
+The List component is used to display the list of pizza items.
+The ListItem component is used to display each pizza item in the list.
+The ListItemText component is used to display the name and description of each pizza item.
+The ListItemSecondaryAction component is used to display the edit and delete buttons for each pizza item.
+The IconButton component is used to create the edit and delete buttons.
+The TextField component is used to create the input fields for the name and description of each pizza item.
+The Button component is used to create the create, update, and cancel buttons.
+Test the new design
+Wait for Vite to reload the front-end React app.
+
+Return to the browser and test the app.
+
+
